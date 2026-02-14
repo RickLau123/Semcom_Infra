@@ -181,3 +181,121 @@ class BaseModem(nn.Module):
             NotImplementedError: This is an abstract base class.
         """
         raise NotImplementedError("Subclasses must implement forward method")
+
+
+class AnalogModem(BaseModem):
+    """
+    Analog Modem for Semantic Communication.
+    
+    This modem implements the physical layer interface for analog JSCC
+    (Joint Source-Channel Coding). Unlike digital modems, it does not
+    perform quantization or discrete modulation. Instead, it relies on
+    the neural network codec to directly operate on continuous-valued symbols.
+    
+    Key Features:
+        - Transmission (forward): Power normalization to satisfy E[x^2] = 1.
+        - Reception (demodulate): Identity/pass-through operation.
+    
+    Rationale for Pass-through Demodulation:
+        In analog JSCC, the decoder network is trained end-to-end to be
+        robust against channel noise and amplitude variations. Therefore,
+        manual de-normalization or equalization is unnecessary and may
+        even degrade performance. The decoder learns to adapt to the
+        received signal distribution implicitly.
+    
+    Note:
+        For digital JSCC or OFDM-based schemes, the demodulate() method
+        should be overridden to perform FFT, LLR calculation, or other
+        digital demodulation steps.
+    """
+    
+    def __init__(self, epsilon: float = 1e-8):
+        """
+        Initialize AnalogModem.
+        
+        Args:
+            epsilon: Small constant to prevent division by zero in normalization.
+                    Default: 1e-8
+        """
+        super(AnalogModem, self).__init__(epsilon=epsilon)
+    
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Modulate symbols for transmission (Tx side).
+        
+        This method performs power normalization to ensure the transmitted
+        signal satisfies the power constraint E[x^2] = 1, which is required
+        for fair SNR comparison across different models and configurations.
+        
+        Args:
+            x: Input symbol tensor of shape (B, 2, k, H', W') from encoder.
+               These are un-normalized semantic symbols.
+        
+        Returns:
+            Power-normalized signal of the same shape, ready for channel.
+        
+        Shape:
+            - Input: (B, 2, k, H', W')
+            - Output: (B, 2, k, H', W')
+        
+        Example:
+            >>> modem = AnalogModem()
+            >>> symbols = torch.randn(4, 2, 16, 8, 8)
+            >>> tx_sig = modem(symbols)
+            >>> # Verify unit power: torch.mean(tx_sig[0]**2) ≈ 1.0
+        
+        Note:
+            Power normalization is applied per sample in the batch,
+            not globally across the entire batch.
+        """
+        # Apply power normalization: E[x^2] = 1
+        # Shape: (B, 2, k, H', W') -> (B, 2, k, H', W')
+        return self.power_normalize(x)
+    
+    def demodulate(self, y: torch.Tensor) -> torch.Tensor:
+        """
+        Demodulate received signal (Rx side).
+        
+        For analog JSCC, this is a **pass-through (identity) operation**.
+        The received noisy signal is directly passed to the decoder without
+        any processing, as the neural network decoder is trained end-to-end
+        to handle noise and amplitude variations adaptively.
+        
+        Args:
+            y: Received signal tensor of shape (B, 2, k, H', W') from channel.
+               This contains noise and/or fading effects.
+        
+        Returns:
+            The same tensor y, unchanged (identity mapping).
+        
+        Shape:
+            - Input: (B, 2, k, H', W')
+            - Output: (B, 2, k, H', W')
+        
+        Example:
+            >>> modem = AnalogModem()
+            >>> rx_sig = torch.randn(4, 2, 16, 8, 8)
+            >>> demod_sig = modem.demodulate(rx_sig)
+            >>> torch.equal(rx_sig, demod_sig)  # True
+        
+        Note:
+            Why pass-through?
+            - The decoder is trained to implicitly denoise and adapt to
+              channel effects. Explicit equalization or de-normalization
+              may disrupt the learned representations.
+            - For digital JSCC or OFDM schemes, override this method to
+              perform FFT, LLR (Log-Likelihood Ratio) calculation, or
+              other demodulation steps.
+        
+        TODO:
+            For OFDM or digital modulation schemes, implement:
+            - IFFT/FFT operations for OFDM
+            - LLR calculation for soft-decision decoding
+            - Channel equalization (e.g., ZF, MMSE)
+        """
+        # Identity operation: directly return received signal
+        return y
+        
+
+        
+
