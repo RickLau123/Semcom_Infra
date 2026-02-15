@@ -3,3 +3,14 @@ __pycache__/
 *.pyc
 *.log
 *.DS_Store
+
+# Ignore all files in the data folder
+/data/*
+
+# Allow image files in the data folder to be tracked
+!/data/**/*.jpg
+!/data/**/*.jpeg
+!/data/**/*.png
+!/data/**/*.bmp
+!/data/**/*.tiff
+!/data/**/*.webp
