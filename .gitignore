@@ -14,3 +14,9 @@ __pycache__/
 !/data/**/*.bmp
 !/data/**/*.tiff
 !/data/**/*.webp
+
+# Ignore all files in the checkpoints folder
+/checkpoints/*
+
+# Ignore all files in the runs folder
+/runs/*

@@ -384,7 +384,6 @@ def get_dataloader(
         shuffle=shuffle,
         num_workers=num_workers,
         pin_memory=True,
-        is_train=True,
         **kwargs,
     )
 
