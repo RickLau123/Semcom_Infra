@@ -20,3 +20,6 @@ __pycache__/
 
 # Ignore all files in the runs folder
 /runs/*
+
+# Ignore all files in the results folder
+/results/*
